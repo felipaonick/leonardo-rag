@@ -1,0 +1,29 @@
+# Python cache
+__pycache__/
+**/__pycache__/
+*.py[cod]
+
+# Virtual envs
+venv/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# Altri file inutili
+*.log
+
+
+# === Data ===
+data/
+
+# === Tests ===
+tests/
+
+# === Esempi e file temporanei ===
+414759-1-_5_Nike-NPS-Combo_Form-10-K_WR.pdf
+ingest.py
