@@ -48,53 +48,53 @@ def check_ollama_available():
 
 
 @tool
-def pdf_query(pdf_path: str, query: str) -> str:
-    """Returns a related answer from the loaded PDF using semantic search from input query"""
+def pdf_query(query: str) -> str:
+    """Returns a related answer from the loaded PDFs using semantic search from input query"""
 
     embedding_model = OllamaEmbeddings(model="nomic-embed-text:latest", base_url="http://host.docker.internal:11434")
 
     collection_name = "my_documents"
+    uploaded_pdfs_dir = Path("./uploaded_pdfs")
+    if not uploaded_pdfs_dir.exists():
+        raise FileNotFoundError("The 'uploaded_pdfs' directory does not exist!")
+    
+    # Gather all PDFs
+    pdf_files = list(uploaded_pdfs_dir.glob("*.pdf"))
+    if not pdf_files:
+        raise FileNotFoundError("No PDF files found in 'uploaded_pdfs'!")
 
-    try:
-        # using an existing collection
-        qdrant = QdrantVectorStore.from_existing_collection(
-            embedding=embedding_model,
-            collection_name=collection_name,
-            url="http://qdrant:6333",  # <--- hostname del servizio Docker! no localhost
-        )
+    all_chunks = []
 
-    except Exception as e:
-
-        # INGESTION 
-
-        print(f"Qdrant fallback: {e}")
-
-        PDF_PATH = Path(pdf_path)
-        if not PDF_PATH.exists():
-            raise FileNotFoundError(f"File {PDF_PATH} not found!")
-
-        loader = PyPDFLoader(str(PDF_PATH))
+    # Process each PDF
+    for pdf_file in pdf_files:
+        loader = PyPDFLoader(str(pdf_file))
         documents = loader.load()
         texts_to_split = [doc.page_content for doc in documents]
 
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=200
+        )
         chunks = text_splitter.create_documents(texts_to_split)
 
-        pdf_name = PDF_PATH.name
+        pdf_name = pdf_file.name
 
         for idx, chunk in enumerate(chunks):
             chunk.metadata["source"] = pdf_name
             chunk.metadata["chunk_id"] = str(uuid4())
             chunk.metadata["chunk_index"] = idx + 1
 
-        qdrant = QdrantVectorStore.from_documents(
-            documents=chunks,
-            embedding=embedding_model,
-            url="http://qdrant:6333",  # <--- hostname del servizio Docker!
-            collection_name=collection_name
-        )
+        all_chunks.extend(chunks)
 
-    # 2️⃣ Search
+    # Write all chunks to Qdrant
+    qdrant = QdrantVectorStore.from_documents(
+        documents=all_chunks,
+        embedding=embedding_model,
+        url="http://qdrant:6333",
+        collection_name=collection_name
+    )
+
+    # Search
     found_docs = qdrant.similarity_search(query, k=4)
     if not found_docs:
         return "No relevant chunks found."
@@ -104,7 +104,7 @@ def pdf_query(pdf_path: str, query: str) -> str:
 
 # miglioria con QA chain
 @tool
-def pdf_query_with_qa(pdf_path: str, query: str) -> str:
+def pdf_query_with_qa(query: str) -> str:
     """Returns a processed answer from the PDF using semantic search and QA chain"""
 
     use_ollama = check_ollama_available()
@@ -116,43 +116,47 @@ def pdf_query_with_qa(pdf_path: str, query: str) -> str:
     embedding_model = OllamaEmbeddings(model="nomic-embed-text:latest", base_url="http://host.docker.internal:11434")
 
     collection_name = "my_documents"
+    uploaded_pdfs_dir = Path("./uploaded_pdfs")
+    if not uploaded_pdfs_dir.exists():
+        raise FileNotFoundError("The 'uploaded_pdfs' directory does not exist!")
+    
+    # Gather all PDFs
+    pdf_files = list(uploaded_pdfs_dir.glob("*.pdf"))
+    if not pdf_files:
+        raise FileNotFoundError("No PDF files found in 'uploaded_pdfs'!")
 
-    try:
-        # using an existing collection
-        qdrant = QdrantVectorStore.from_existing_collection(
-            embedding=embedding_model,
-            collection_name=collection_name,
-            url="http://qdrant:6333",  # <--- hostname del servizio Docker!
-        )
+    all_chunks = []
 
-    except Exception as e:
-        print(f"Qdrant fallback: {e}")
-
-        PDF_PATH = Path(pdf_path)
-        if not PDF_PATH.exists():
-            raise FileNotFoundError(f"File {PDF_PATH} not found!")
-
-        loader = PyPDFLoader(str(PDF_PATH))
+    # Process each PDF
+    for pdf_file in pdf_files:
+        loader = PyPDFLoader(str(pdf_file))
         documents = loader.load()
         texts_to_split = [doc.page_content for doc in documents]
 
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=200
+        )
         chunks = text_splitter.create_documents(texts_to_split)
 
-        pdf_name = PDF_PATH.name
+        pdf_name = pdf_file.name
 
         for idx, chunk in enumerate(chunks):
             chunk.metadata["source"] = pdf_name
             chunk.metadata["chunk_id"] = str(uuid4())
             chunk.metadata["chunk_index"] = idx + 1
 
-        qdrant = QdrantVectorStore.from_documents(
-            documents=chunks,
-            embedding=embedding_model,
-            url="http://qdrant:6333",  # <--- hostname del servizio Docker!
-            collection_name=collection_name
-        )
+        all_chunks.extend(chunks)
 
+    # Write all chunks to Qdrant
+    qdrant = QdrantVectorStore.from_documents(
+        documents=all_chunks,
+        embedding=embedding_model,
+        url="http://qdrant:6333",
+        collection_name=collection_name
+    )
+
+    # Search
     found_docs = qdrant.similarity_search(query, k=4)
 
     # Usiamo QA chain per dare risposte migliori

@@ -25,7 +25,7 @@ services:
       - "6333:6333"
       - "6334:6334" # gRPC port, optional if you need it
     volumes:
-      - qdrant_data:/qdrant/storage
+      - ./qdrant_data:/qdrant/storage
     restart: unless-stopped
 
 volumes:

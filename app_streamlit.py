@@ -24,6 +24,7 @@ st.title("Leonardo RAG")
 
 # sidebar for LLM selection
 with st.sidebar:
+    st.logo("./aieng_log.jpeg", size="large")
     st.header("⚙️ Settings")
 
     # check OLLAMA connection
@@ -69,17 +70,12 @@ if uploaded_file is not None:
 
     st.success(f"✅ Uploaded file saved as: `{pdf_path_str}`")
 
-    # Mostra info
-    st.info(f"Using file: `{uploaded_file.name}`")
-
 
 # Main content
 initial_msg = f"""
-#### Welcome!!! I am your RAG assistant chatbot 🤖
+#### Welcome!!! I am your RAG assistant chatbot 👨‍🦰
 #### You can ask me any queries about Leonardo's Documents
-> **NOTE:** Currently I have access to the **Nike** document. Try to ask relevant queries only😇
-
-> **NEW:** You can now choose between cloud-based Groq or local OLLAMA models in the sidebar!
+> **NOTE:** Currently I have access to the **{"./uploaded_pdfs"}** directory where all uploaded PDFs are stored. Try to ask relevant queries only😇
 """
 st.markdown(initial_msg)
 
@@ -94,7 +90,7 @@ store = st.session_state.store
 # Display chat history
 for message in store:
     if message.type == "ai":
-        avatar = "🤖"
+        avatar = "👨‍🦰"
     else:
         avatar = "💬"
 
@@ -108,7 +104,7 @@ if prompt := st.chat_input("What is your query?"):
     st.chat_message("user", avatar="💬").markdown(prompt)
 
     # Show thinking message
-    thinking_placeholder = st.chat_message("assistant", avatar="🤖")
+    thinking_placeholder = st.chat_message("assistant", avatar="👨‍🦰")
     thinking_placeholder.markdown("Thinking...")
 
     # Add user message to store
@@ -119,7 +115,7 @@ if prompt := st.chat_input("What is your query?"):
         
 
         if ollama_available:
-            response_content = agent(prompt, use_ollama=True, ollama_model="llama3.1:8b")
+            response_content = agent(query=prompt, ollama_model="llama3.1:8b")
 
         
             response = AIMessage(content=response_content)
@@ -146,7 +142,7 @@ st.markdown("---")
 st.markdown(
     """
     <div style='text-align: center; color: gray; font-size: 12px;'>
-        💡 Tip: Use OLLAMA for unlimited local processing or Groq for faster cloud-based responses
+        💡 Tip: Use OLLAMA for unlimited local processing
     </div>
     """,
     unsafe_allow_html=True

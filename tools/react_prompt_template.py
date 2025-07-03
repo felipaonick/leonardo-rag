@@ -36,11 +36,11 @@ EXAMPLE
 
 Question: Who is the CEO?
 
-Thought: I should use the PDF tool to check the PDF.
+Thought: I should use the PDF tool.
 
 Action: pdf_query
 
-Action Input: {{ "pdf_path": "/path/to/document.pdf", "query": "CEO name" }}
+Action Input: {{ "query": "CEO name" }}
 
 Observation: The CEO is John Donahoe.
 

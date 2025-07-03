@@ -7,7 +7,7 @@ from tools.pdf_query_tools import pdf_query
 import os
 
 
-def agent(pdf_path: str, query: str, ollama_model: str = "llama3.2:3b"):
+def agent(query: str, ollama_model: str = "llama3.2:3b"):
     """
     Create and run an agent with either Groq or OLLAMA LLM
 
@@ -54,7 +54,7 @@ def agent(pdf_path: str, query: str, ollama_model: str = "llama3.2:3b"):
 
 
     try:
-        result = agent_executor.invoke({"query": query, "pdf_path": pdf_path})
+        result = agent_executor.invoke({"query": query})
         return result['output']
     
     except Exception as e:
