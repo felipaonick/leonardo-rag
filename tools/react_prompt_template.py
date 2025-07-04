@@ -1,5 +1,7 @@
 from langchain.prompts import PromptTemplate
 
+from langchain.prompts import PromptTemplate
+
 def get_prompt_template():
     return PromptTemplate.from_template(
         """
@@ -60,11 +62,13 @@ Thought:{agent_scratchpad}
 
 
 
+
 if __name__ == "__main__":
     prompt_template = get_prompt_template()
     print(prompt_template.format(
         tools="pdf_query",
         tool_names="pdf_query",
         query="Who is the CEO?",
+        collection_name="finance_docs",
         agent_scratchpad=""
     ))

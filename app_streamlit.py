@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 import streamlit as st
 from pathlib import Path
 from agent import agent, check_ollama_connection, get_available_ollama_models
+from tools.pdf_query_tools import embed_pdf_in_qdrant
 
 load_dotenv()   
 
@@ -25,7 +26,6 @@ st.title("Leonardo RAG")
 # sidebar for LLM selection
 with st.sidebar:
     st.logo("./aieng_log.jpeg", size="large")
-    st.header("⚙️ Settings")
 
     # check OLLAMA connection
     ollama_available = check_ollama_connection()
@@ -34,48 +34,71 @@ with st.sidebar:
         st.success("✅ Ollama is running")
         
     else:
-
         st.error("❌ OLLAMA not running")
 
+    # PDF upload
 
+    category = st.selectbox(
+        "📁 Select the PDF Category",
+        ["Helicopters", "Aircraft and Aerostructures", "Eletronics"],
+        help="Choose the category for this PDF."
+    )
 
-# PDF upload
+    if category == "Helicopters":
+        collection_name = "helicopters_docs"
+    elif category == "Aircraft and Aerostructures":
+        collection_name = "aircraft_docs"
+    elif category == "Electronics":
+        collection_name = "electronics_docs"
 
-st.markdown("⬆️ Upload the document for RAG processing.")
+    # Store collection name in session state
+    st.session_state["collection_name"] = collection_name
 
-uploaded_file = st.file_uploader(
-    "📄 Upload your PDF Document",
-    type=["pdf"],
-    help="Upload a PDF file to run semantic search on"
-)
+    uploaded_file = st.file_uploader(
+        "📄 Upload your PDF document for RAG processing.",
+        type=["pdf"],
+        help="Upload a PDF file to run semantic search on"
+    )
 
-# Path del PDF salvato (di default None)
+    # Path del PDF salvato (di default None)
+    pdf_path = None
+    path_name = None
 
-pdf_path = None
-path_name = None
+    if uploaded_file is not None:
+        
+        # Se è un nuovo file, resetta flag
+        if st.session_state.get("uploaded_file_name") != uploaded_file.name:
+            st.session_state["embedding_done"] = False
+            st.session_state["uploaded_file_name"] = uploaded_file.name
+        
 
-if uploaded_file is not None:
-    # Definisci dove salvarlo
-    save_dir = Path("./uploaded_pdfs")
-    save_dir.mkdir(parents=True, exist_ok=True)
+        if not st.session_state.get("embedding_done", False):
+            save_dir = Path("./uploaded_pdfs")
+            save_dir.mkdir(parents=True, exist_ok=True)
 
-    # Salva il PDF caricato
-    pdf_path = save_dir / uploaded_file.name
-    with open(pdf_path, "wb") as f:
-        f.write(uploaded_file.getbuffer())
+            pdf_path = save_dir / uploaded_file.name
+            with open(pdf_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
 
-    path_name = Path(pdf_path).name
+            path_name = Path(pdf_path).name
 
-    pdf_path_str = pdf_path.as_posix()
+            pdf_path_str = pdf_path.as_posix()
 
-    st.success(f"✅ Uploaded file saved as: `{pdf_path_str}`")
+            st.success(f"✅ Uploaded file saved as: `{pdf_path_str}`")
+
+            with st.spinner(f"⏳ Indexing `{path_name}` in `{collection_name}` Please wait..."):
+                embed_pdf_in_qdrant(pdf_path, collection_name)
+
+            st.session_state["embedding_done"] = True
+            st.success("Done!")
+            st.info(f"✅ Document indexed in collection `{collection_name}`")
 
 
 # Main content
 initial_msg = f"""
 #### Welcome!!! I am your RAG assistant chatbot 👨‍🦰
 #### You can ask me any queries about Leonardo's Documents
-> **NOTE:** Currently I have access to the **{"./uploaded_pdfs"}** directory where all uploaded PDFs are stored. Try to ask relevant queries only😇
+> **NOTE:** Currently I have access to the **{collection_name}** vector store where the uploaded PDFs are stored. Try to ask relevant queries only😇
 """
 st.markdown(initial_msg)
 
@@ -110,13 +133,9 @@ if prompt := st.chat_input("What is your query?"):
     # Add user message to store
     store.append(HumanMessage(content=prompt))
 
-
     try:
-        
-
         if ollama_available:
             response_content = agent(query=prompt, ollama_model="llama3.1:8b")
-
         
             response = AIMessage(content=response_content)
 

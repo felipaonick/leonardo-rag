@@ -52,7 +52,6 @@ def agent(query: str, ollama_model: str = "llama3.2:3b"):
         early_stopping_method="force"
     )
 
-
     try:
         result = agent_executor.invoke({"query": query})
         return result['output']
